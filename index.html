@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -13,10 +12,7 @@
       --border:#25374c;
     }
     * { box-sizing:border-box; }
-    body {
-      margin:0; background:var(--bg); color:var(--text);
-      font-family:Arial,sans-serif;
-    }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:Arial,sans-serif; }
     button,input,select { font:inherit; }
     button { cursor:pointer; }
     header {
@@ -66,6 +62,7 @@
     .account-box input,.admin-box input { display:block; width:100%; margin:8px 0 14px; }
     .account-box button,.admin-box > button { margin:5px 0; }
     .round-card { margin:12px 0; padding:14px; background:#0f172a; border-radius:10px; overflow-wrap:anywhere; }
+    .round-card button { margin:5px 5px 5px 0; }
     @media(max-width:650px) {
       .grid { grid-template-columns:1fr; }
       .card { padding:17px; }
@@ -170,15 +167,14 @@
 
   <section id="painel-admin-clube" class="admin-box hidden">
     <h2>Painel do administrador</h2>
-    <p>Configure o orçamento virtual de cada rodada mensal.</p>
+    <p>Crie rodadas e controle manualmente quando elas começam e terminam.</p>
+
     <label for="admin-nome-rodada">Nome da rodada</label>
     <input id="admin-nome-rodada" type="text" placeholder="Ex.: Rodada de novembro">
-    <label for="admin-inicio-rodada">Data de início</label>
-    <input id="admin-inicio-rodada" type="date">
-    <label for="admin-fim-rodada">Data de encerramento</label>
-    <input id="admin-fim-rodada" type="date">
+
     <label for="admin-orcamento-rodada">Orçamento virtual por participante (R$)</label>
     <input id="admin-orcamento-rodada" type="number" min="0.01" step="0.01" placeholder="Ex.: 500">
+
     <button id="admin-criar-rodada" class="primary" type="button">Criar rodada em rascunho</button>
     <p id="admin-mensagem-rodada" role="status"></p>
     <div id="admin-lista-rodadas"></div>
@@ -192,11 +188,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // Use apenas a chave PUBLICÁVEL do Supabase neste arquivo.
-  // Nunca coloque chaves secretas ou service_role no site.
   const SUPABASE_URL = 'https://fpbnbmieqwjxozhhndvv.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_zBfaTBnIiodCGT8bZA2jNA_m4Ko317t';
-
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const knownAssets = [
@@ -245,9 +238,7 @@
   function dinheiro(valor, moeda) {
     const numero = Number(valor);
     if (valor === null || valor === undefined || valor === "" || !Number.isFinite(numero)) return "—";
-    return numero.toLocaleString("pt-BR", {
-      style:"currency", currency:moeda || "BRL"
-    });
+    return numero.toLocaleString("pt-BR", {style:"currency",currency:moeda || "BRL"});
   }
 
   function dataHora(valor) {
@@ -275,11 +266,9 @@
 
       listaBanco.forEach(item => {
         const simbolo = String(item.symbol || "").trim().toUpperCase();
-        if (!simbolo) return;
-        cotacoesBanco[simbolo] = {...item,symbol:simbolo};
+        if (simbolo) cotacoesBanco[simbolo] = {...item,symbol:simbolo};
       });
 
-      // Combina a lista conhecida com TODOS os símbolos que existirem no banco.
       const mapa = new Map();
       knownAssets.forEach(item => mapa.set(item.symbol,item));
 
@@ -289,18 +278,14 @@
         const existente = mapa.get(symbol);
         mapa.set(symbol,{
           symbol,
-          name: item.name || (existente && existente.name) || symbol,
-          market: (existente && existente.market) || (usSymbols.has(symbol) ? "US" : "BR")
+          name:item.name || (existente && existente.name) || symbol,
+          market:(existente && existente.market) || (usSymbols.has(symbol) ? "US" : "BR")
         });
       });
 
       assets = Array.from(mapa.values()).sort((a,b) => a.symbol.localeCompare(b.symbol));
 
-      const horarioMaisRecente = listaBanco
-        .map(item => item.updated_at)
-        .filter(Boolean)
-        .sort()
-        .pop();
+      const horarioMaisRecente = listaBanco.map(item => item.updated_at).filter(Boolean).sort().pop();
 
       mensagemMercado.textContent = listaBanco.length
         ? "Lista carregada do banco. Registro mais recente: " + dataHora(horarioMaisRecente) + "."
@@ -308,8 +293,7 @@
 
       renderAssets();
     } catch (error) {
-      mensagemMercado.textContent =
-        "Erro ao carregar os ativos. Verifique a conexão e as permissões de leitura do Supabase.";
+      mensagemMercado.textContent = "Erro ao carregar os ativos. Verifique a conexão e as permissões de leitura do Supabase.";
       console.error("Erro ao carregar ativos:",error);
       renderAssets();
     } finally {
@@ -348,21 +332,16 @@
 
       const tdPreco = document.createElement("td");
       const preco = cotacao ? Number(cotacao.price) : NaN;
-      const precoValido = cotacao &&
-        cotacao.price !== null &&
-        cotacao.price !== undefined &&
-        cotacao.price !== "" &&
-        Number.isFinite(preco) &&
-        preco > 0;
+      const precoValido = cotacao && cotacao.price !== null &&
+        cotacao.price !== undefined && cotacao.price !== "" &&
+        Number.isFinite(preco) && preco > 0;
 
       tdPreco.textContent = precoValido
         ? dinheiro(preco,asset.market === "US" ? "USD" : "BRL")
         : "Sem cotação válida";
 
       const tdAtualizacao = document.createElement("td");
-      tdAtualizacao.textContent = cotacao
-        ? dataHora(cotacao.updated_at)
-        : "Aguardando cadastro";
+      tdAtualizacao.textContent = cotacao ? dataHora(cotacao.updated_at) : "Aguardando cadastro";
 
       tr.append(tdAtivo,tdMercado,tdPreco,tdAtualizacao);
       tbody.appendChild(tr);
@@ -370,8 +349,7 @@
 
     document.getElementById("assetCount").textContent =
       filtrados.length + " ativos nesta lista. " +
-      Object.keys(cotacoesBanco).length +
-      " símbolos encontrados no banco.";
+      Object.keys(cotacoesBanco).length + " símbolos encontrados no banco.";
   }
 
   function showPage(page) {
@@ -388,8 +366,7 @@
   });
   search.addEventListener("input",renderAssets);
   exchange.addEventListener("change",renderAssets);
-  document.getElementById("btn-atualizar-mercado")
-    .addEventListener("click",carregarCotacoesBanco);
+  document.getElementById("btn-atualizar-mercado").addEventListener("click",carregarCotacoesBanco);
 
   const emailInput = document.getElementById("email-clube");
   const senhaInput = document.getElementById("senha-clube");
@@ -409,17 +386,13 @@
 
     if (sessaoErro || !sessaoData.session) {
       document.getElementById("saldo-resumo").textContent = "Entre na conta";
-      document.getElementById("saldo-real-clube").textContent =
-        "Entre na sua conta para consultar seu saldo.";
+      document.getElementById("saldo-real-clube").textContent = "Entre na sua conta para consultar seu saldo.";
       return;
     }
 
     const usuario = sessaoData.session.user;
     const {data:perfil,error} = await supabaseClient
-      .from("profiles")
-      .select("virtual_balance")
-      .eq("id",usuario.id)
-      .maybeSingle();
+      .from("profiles").select("virtual_balance").eq("id",usuario.id).maybeSingle();
 
     if (error || !perfil) {
       document.getElementById("saldo-resumo").textContent = "Indisponível";
@@ -504,10 +477,7 @@
     }
 
     const {data:perfil,error:erroPerfil} = await supabaseClient
-      .from("profiles")
-      .select("role")
-      .eq("id",data.session.user.id)
-      .maybeSingle();
+      .from("profiles").select("role").eq("id",data.session.user.id).maybeSingle();
 
     if (erroPerfil || perfil?.role !== "admin") {
       painel.classList.add("hidden");
@@ -518,40 +488,82 @@
     await carregarRodadasAdmin();
   }
 
-  document.getElementById("admin-criar-rodada")
-    .addEventListener("click",async function() {
-      const botao = this;
-      const mensagem = document.getElementById("admin-mensagem-rodada");
-      const nome = document.getElementById("admin-nome-rodada").value.trim();
-      const inicio = document.getElementById("admin-inicio-rodada").value;
-      const fim = document.getElementById("admin-fim-rodada").value;
-      const orcamento = Number(document.getElementById("admin-orcamento-rodada").value);
+  document.getElementById("admin-criar-rodada").addEventListener("click",async function() {
+    const botao = this;
+    const mensagem = document.getElementById("admin-mensagem-rodada");
+    const nome = document.getElementById("admin-nome-rodada").value.trim();
+    const orcamento = Number(document.getElementById("admin-orcamento-rodada").value);
 
-      if (!nome || !inicio || !fim || !Number.isFinite(orcamento) || orcamento <= 0) {
-        mensagem.textContent = "Preencha todos os campos com valores válidos.";
-        return;
-      }
-      if (fim < inicio) {
-        mensagem.textContent = "A data final deve ser igual ou posterior à inicial.";
-        return;
-      }
+    if (!nome || !Number.isFinite(orcamento) || orcamento <= 0) {
+      mensagem.textContent = "Informe o nome e um orçamento válido.";
+      return;
+    }
 
-      botao.disabled = true;
-      mensagem.textContent = "Criando rodada...";
+    botao.disabled = true;
+    mensagem.textContent = "Criando rodada...";
 
-      try {
-        const {data,error} = await supabaseClient.rpc("criar_rodada_mensal",{
-          p_nome:nome,p_inicio:inicio,p_fim:fim,p_orcamento:orcamento
-        });
-        if (error) throw error;
-        mensagem.textContent = "Rascunho criado com sucesso. Identificador: " + data;
-        await carregarRodadasAdmin();
-      } catch (erro) {
-        mensagem.textContent = "Não foi possível criar: " + erro.message;
-      } finally {
-        botao.disabled = false;
-      }
-    });
+    try {
+      const {data,error} = await supabaseClient.rpc("criar_rodada_mensal",{
+        p_nome:nome,
+        p_inicio:null,
+        p_fim:null,
+        p_orcamento:orcamento
+      });
+
+      if (error) throw error;
+
+      mensagem.textContent = "Rodada criada com sucesso!";
+      document.getElementById("admin-nome-rodada").value = "";
+      document.getElementById("admin-orcamento-rodada").value = "";
+      await carregarRodadasAdmin();
+    } catch (erro) {
+      mensagem.textContent = "Erro ao criar rodada: " + erro.message;
+    } finally {
+      botao.disabled = false;
+    }
+  });
+
+  async function ativarRodada(rodadaId,botao) {
+    if (!confirm("Tem certeza de que deseja iniciar esta rodada? Os preços atuais dos ativos serão registrados como preços iniciais.")) return;
+
+    botao.disabled = true;
+
+    try {
+      const {data,error} = await supabaseClient.rpc("ativar_rodada_mensal",{
+        p_rodada_id:rodadaId
+      });
+
+      if (error) throw error;
+
+      alert(data || "Rodada ativada com sucesso!");
+      await carregarRodadasAdmin();
+    } catch (erro) {
+      alert("Não foi possível ativar a rodada: " + erro.message);
+    } finally {
+      botao.disabled = false;
+    }
+  }
+
+  async function encerrarRodada(rodadaId,botao) {
+    if (!confirm("Deseja realmente encerrar esta rodada? Essa ação deve ser considerada definitiva.")) return;
+
+    botao.disabled = true;
+
+    try {
+      const {data,error} = await supabaseClient.rpc("encerrar_rodada_mensal",{
+        p_rodada_id:rodadaId
+      });
+
+      if (error) throw error;
+
+      alert(data || "Rodada encerrada.");
+      await carregarRodadasAdmin();
+    } catch (erro) {
+      alert("Não foi possível encerrar a rodada: " + erro.message);
+    } finally {
+      botao.disabled = false;
+    }
+  }
 
   async function carregarRodadasAdmin() {
     const lista = document.getElementById("admin-lista-rodadas");
@@ -561,6 +573,7 @@
       .order("created_at",{ascending:false});
 
     lista.replaceChildren();
+
     const titulo = document.createElement("h3");
     titulo.textContent = "Rodadas do Clube";
     lista.appendChild(titulo);
@@ -590,8 +603,12 @@
       orcamento.textContent = "Orçamento por participante: " +
         dinheiro(Number(rodada.starting_budget),"BRL");
 
-      const datas = document.createElement("p");
-      datas.textContent = "Período: " + rodada.start_date + " até " + rodada.end_date;
+      const periodo = document.createElement("p");
+      periodo.textContent = rodada.status === "draft"
+        ? "Início: quando o administrador ativar."
+        : rodada.status === "active"
+          ? "Rodada em andamento. O encerramento será manual."
+          : "Rodada encerrada.";
 
       const status = document.createElement("p");
       status.textContent = "Status: " + rodada.status;
@@ -602,10 +619,12 @@
 
       botaoRanking.addEventListener("click",async function() {
         botaoRanking.disabled = true;
+
         try {
           const {data:ranking,error:erroRanking} = await supabaseClient.rpc("ranking_rodada",{
             p_rodada_id:rodada.id
           });
+
           if (erroRanking) throw erroRanking;
 
           let resultado = cartao.querySelector(".resultado-ranking");
@@ -632,15 +651,24 @@
         }
       });
 
-      const botaoAtivar = document.createElement("button");
-      botaoAtivar.className = "secondary";
-      botaoAtivar.style.marginLeft = "8px";
-      botaoAtivar.textContent = "Ativar rodada";
-      botaoAtivar.addEventListener("click",() => {
-        alert("A ativação permanece bloqueada enquanto terminamos os testes de segurança. Nenhuma rodada foi iniciada.");
-      });
+      cartao.append(nome,orcamento,periodo,status,botaoRanking);
 
-      cartao.append(nome,orcamento,datas,status,botaoRanking,botaoAtivar);
+      if (rodada.status === "draft") {
+        const botaoAtivar = document.createElement("button");
+        botaoAtivar.className = "primary";
+        botaoAtivar.textContent = "Iniciar rodada";
+        botaoAtivar.addEventListener("click",() => ativarRodada(rodada.id,botaoAtivar));
+        cartao.appendChild(botaoAtivar);
+      }
+
+      if (rodada.status === "active") {
+        const botaoEncerrar = document.createElement("button");
+        botaoEncerrar.className = "secondary";
+        botaoEncerrar.textContent = "Encerrar rodada";
+        botaoEncerrar.addEventListener("click",() => encerrarRodada(rodada.id,botaoEncerrar));
+        cartao.appendChild(botaoEncerrar);
+      }
+
       lista.appendChild(cartao);
     });
   }
@@ -663,8 +691,6 @@
 
   iniciarSite();
 
-  // Recarrega os dados do banco a cada minuto.
-  // Isso não solicita novas cotações à API; o cron atualiza os preços no servidor.
   setInterval(carregarCotacoesBanco,60000);
 </script>
 </body>
